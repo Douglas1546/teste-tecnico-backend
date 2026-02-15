@@ -1,0 +1,68 @@
+image: ubuntu:24.04
+
+definitions:
+  steps:
+    - step: &Build
+        name: Build            
+        script:     
+          - DEBIAN_FRONTEND=noninteractive
+          - apt-get update && apt-get --yes install -qy software-properties-common     
+          - apt-get install -qy git curl libmcrypt-dev mariadb-client ghostscript libzip-dev zlib1g-dev zip openssh-client          
+          - add-apt-repository ppa:ondrej/php
+          - apt-get -y install php7.0
+          - apt-get -qy install php7.0 php7.0-cli php7.0-common php7.0-json php7.0-opcache php7.0-mysql php7.0-mbstring php7.0-mcrypt php7.0-zip php7.0-fpm php7.0-xml php7.0-gd php7.0-curl
+          # Download do composer
+          - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+          - rm composer.lock
+          - composer install
+          # Gera um build.info
+          - echo $BITBUCKET_BUILD_NUMBER > build.info
+          - echo $BITBUCKET_COMMIT >> build.info
+          # Gerando arquivo .zip para o artifacts 
+          - mkdir back
+          - ls --ignore=back | xargs -I {} mv {} back
+          - mkdir build_release
+          - zip -r build_release/censo-back-$BITBUCKET_BUILD_NUMBER.zip ./back -x *.git* bitbucket-pipelines.yml
+        artifacts:
+          - "build_release/*.zip"
+    - step: &Deploy
+        name: Deploy
+        deployment: Desenvolvimento
+        script:
+          - apt-get update && apt-get install -qy zip openssh-client
+          - echo $SSH_PEM | base64 -d > id_rsa.pem          
+          - chmod 700 id_rsa.pem          
+          - ssh-keyscan -t rsa $SERVIDOR_URL >> ~/.ssh/known_hosts 
+          - ls -lah
+          - echo scp -i id_rsa.pem build_release/censo-back-$BITBUCKET_BUILD_NUMBER.zip $SERVIDOR_USUARIO@$SERVIDOR_URL:$PASTA_SISTEMA/novo/back_novo.zip
+          - scp -i id_rsa.pem build_release/censo-back-$BITBUCKET_BUILD_NUMBER.zip $SERVIDOR_USUARIO@$SERVIDOR_URL:$PASTA_SISTEMA/novo/back_novo.zip
+          - ssh -i id_rsa.pem $SERVIDOR_USUARIO@$SERVIDOR_URL "unzip -d $PASTA_SISTEMA/novo $PASTA_SISTEMA/novo/back_novo.zip"                                    
+          - ssh -i id_rsa.pem $SERVIDOR_USUARIO@$SERVIDOR_URL "rm $PASTA_SISTEMA/novo/back_novo.zip"
+          - ssh -i id_rsa.pem $SERVIDOR_USUARIO@$SERVIDOR_URL "cp $PASTA_ENV_PADRAO/.env $PASTA_SISTEMA/novo/back/.env"          
+          - ssh -i id_rsa.pem $SERVIDOR_USUARIO@$SERVIDOR_URL "sudo mv $PASTA_SISTEMA/back $PASTA_SISTEMA/back_bkp_$(date +%Y_%m_%d_%H_%M_%S)"
+          - ssh -i id_rsa.pem $SERVIDOR_USUARIO@$SERVIDOR_URL "sudo mv $PASTA_SISTEMA/novo/back $PASTA_SISTEMA/back"
+          - ssh -i id_rsa.pem $SERVIDOR_USUARIO@$SERVIDOR_URL "cd $PASTA_SISTEMA/back && sudo $SCRIPT_PERMISSAO_PADRAO"
+          - ssh -i id_rsa.pem $SERVIDOR_USUARIO@$SERVIDOR_URL "cd $PASTA_SISTEMA && sudo $SCRIPT_REMOVE_BACKUPS_ANTIGOS"
+
+pipelines:
+  custom:
+    staging:
+      - step: *Build
+      - step:
+          <<: *Deploy
+          deployment: StageProducao
+
+  branches:
+    '{develop,develop-whitelabel}':
+      - step: *Build
+      - step: *Deploy
+    '{release-whitelabel/**,hotfix-whitelabel/**}':
+      - step: *Build
+      - step:
+          <<: *Deploy
+          deployment: HomologacaoWhitelabel
+    '{release-estudoplay/**,hotfix-estudoplay/**}':
+      - step: *Build
+      - step:
+          <<: *Deploy
+          deployment: HomologacaoEstudoplay

@@ -32,7 +32,7 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'mysql'),
+    'default' => env('DB_CONNECTION', 'censo'),
 
     /*
     |--------------------------------------------------------------------------
@@ -52,16 +52,16 @@ return [
 
     'connections' => [
 
-        'mysql' => [
-            'driver'    => 'mysql',
-            'host'      => env('DB_HOST'),
-            'port'      => env('DB_PORT'),
-            'database'  => env('DB_SEMCHAMADA_DATABASE'),
-            'username'  => env('DB_USERNAME'),
-            'password'  => env('DB_PASSWORD'),
-            'charset'   => 'utf8',
-            'collation' => 'utf8_unicode_ci',
-        ],
+        // 'mysql' => [
+        //     'driver'    => 'mysql',
+        //     'host'      => env('DB_HOST'),
+        //     'port'      => env('DB_PORT'),
+        //     'database'  => env('DB_SEMCHAMADA_DATABASE'),
+        //     'username'  => env('DB_USERNAME'),
+        //     'password'  => env('DB_PASSWORD'),
+        //     'charset'   => 'utf8',
+        //     'collation' => 'utf8_unicode_ci',
+        // ],
 
         'compartilhados' => [
             'driver'    => 'mysql',

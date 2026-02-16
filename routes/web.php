@@ -18,4 +18,6 @@ $router->get('/', function () use ($router) {
 $router->group(['prefix' => 'instituicao_usuarios'], function () use ($router) {
     $router->get('/byid', ['uses' => 'InstituicaoUsuarioController@byId']);
     $router->get('/listar', ['uses' => 'InstituicaoUsuarioController@listar']);
+    $router->delete('/blacklist/remover', ['uses' => 'BlacklistController@remover']);
 });
+

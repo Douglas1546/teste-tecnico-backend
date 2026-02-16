@@ -98,4 +98,18 @@ return [
     ],
 
 
+    /*
+
+|--------------------------------------------------------------------------
+| Tabela do Repositório de Migrações
+|--------------------------------------------------------------------------
+|
+| Esta tabela registra todas as migrações que já foram executadas para
+| sua aplicação. Usando essas informações, podemos determinar quais
+| das migrações em disco ainda não foram executadas no banco de dados.
+|
+*/
+
+    'migrations' => 'migrations',
+
 ];

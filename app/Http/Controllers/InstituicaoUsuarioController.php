@@ -14,6 +14,7 @@ use App\Repository\InstituicaoUsuarioRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Validator;
 
 class InstituicaoUsuarioController extends Controller
 {
@@ -95,6 +96,60 @@ class InstituicaoUsuarioController extends Controller
             return true;
         } else {
             return false;
+        }
+    }
+    public function editar(Request $request)
+    {
+        try {
+            // Validação
+            $validator = Validator::make($request->all(), [
+                'inst_usua_id' => 'required|numeric',
+                'usua_nome' => 'required|string|max:255',
+                'usua_email' => 'required|email|max:255'
+            ]);
+
+            if ($validator->fails()) {
+                return new JsonResponse(['success' => false, 'data' => '', 'message' => $validator->errors()->first()], Response::HTTP_BAD_REQUEST);
+            }
+
+            // Busca o vinculo da instituição
+            $instituicaoUsuario = InstituicaoUsuarios::where('inst_usua_id', $request->input('inst_usua_id'))
+                ->where('inst_codigo', $request->header('inst_codigo')) // Garante que pertence à instituição
+                ->first();
+
+            if (!$instituicaoUsuario) {
+                return new JsonResponse(['success' => false, 'data' => '', 'message' => 'Usuário não encontrado na instituição.'], Response::HTTP_NOT_FOUND);
+            }
+
+            // Busca o usuário real
+            $usuario = $instituicaoUsuario->idUsuario;
+
+            if (!$usuario) {
+                return new JsonResponse(['success' => false, 'data' => '', 'message' => 'Usuário não encontrado.'], Response::HTTP_NOT_FOUND);
+            }
+
+            $oldEmail = $usuario->usua_email;
+            $newEmail = $request->input('usua_email');
+
+            // Verifica se o email mudou
+            if ($oldEmail != $newEmail) {
+                // Atualiza o email na blacklist caso exista e não esteja deletado
+                \DB::table(config('database.email_schema') . '.em_black_list')
+                    ->where('black_list_mail', $oldEmail)
+                    ->whereNull('deleted_at')
+                    ->update(['black_list_mail' => $newEmail]);
+            }
+
+            // Atualiza dados
+            $usuario->usua_nome = $request->input('usua_nome');
+            $usuario->usua_email = $newEmail;
+
+            // Salva na tabela id_usuarios (banco compartilhados)
+            $usuario->save();
+
+            return new JsonResponse(['success' => true, 'data' => '', 'message' => 'Usuário atualizado com sucesso.'], Response::HTTP_OK);
+        } catch (\Exception $e) {
+            return new JsonResponse(['success' => false, 'data' => '', 'message' => 'Ocorreu um erro ao atualizar o usuário: ' . $e->getMessage()], Response::HTTP_BAD_REQUEST);
         }
     }
 }

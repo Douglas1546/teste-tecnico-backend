@@ -11,6 +11,7 @@ namespace App\Http\Controllers;
 
 use App\Model\InstituicaoUsuarios;
 use App\Repository\InstituicaoUsuarioRepository;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -37,7 +38,24 @@ class InstituicaoUsuarioController extends Controller
             $usuario_retorno['usuario_funcao'] = $usuario->inst_usua_funcao;
             $usuario_retorno['usuario_sexo'] = $dados_usuario->usua_sexo;
             $usuario_retorno['usuario_idioma'] = $usuario->inst_usua_idioma;
-            $usuario_retorno['email_blacklist'] = (!empty($dados_usuario->usua_email) && !empty($dados_usuario->emBlackList) ? 1 : 0);
+            $isBlacklisted = (!empty($dados_usuario->usua_email) && !empty($dados_usuario->emBlackList));
+            $usuario_retorno['email_blacklist'] = ($isBlacklisted ? 1 : 0);
+
+            // Lógica para can_remove_from_blacklist
+            $usuario_retorno['can_remove_from_blacklist'] = 0;
+            if ($isBlacklisted) {
+                $blacklistEntry = $dados_usuario->emBlackList;
+                if ($blacklistEntry) {
+                    $tempoMinimo = config('blacklist.min_removal_minutes', 5);
+                    $criadoEm = Carbon::parse($blacklistEntry->created_at);
+                    $agora = Carbon::now();
+
+                    // Verifica se o tempo mínimo de remoção foi atingido
+                    if ($criadoEm->diffInMinutes($agora) >= $tempoMinimo) {
+                        $usuario_retorno['can_remove_from_blacklist'] = 1;
+                    }
+                }
+            }
             $usuario_retorno['usua_foto'] = $dados_usuario['usua_foto'];
             $usuario_retorno['usua_foto_miniatura'] = $dados_usuario['usua_foto_miniatura'];
 

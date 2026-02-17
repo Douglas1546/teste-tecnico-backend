@@ -15,6 +15,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class InstituicaoUsuarioController extends Controller
@@ -38,18 +39,20 @@ class InstituicaoUsuarioController extends Controller
             $usuario_retorno['usuario_funcao'] = $usuario->inst_usua_funcao;
             $usuario_retorno['usuario_sexo'] = $dados_usuario->usua_sexo;
             $usuario_retorno['usuario_idioma'] = $usuario->inst_usua_idioma;
-            // Verifica se está na blacklist (apenas registros ativos, não deletados)
-            $blacklistEntry = $dados_usuario->emBlackList;
-            $isBlacklisted = (!empty($dados_usuario->usua_email) &&
-                !empty($blacklistEntry) &&
-                is_null($blacklistEntry->deleted_at));
+            // Verifica se está na blacklist com query direta para garantir consistência e evitar problemas de cache/relacionamento
+            $blacklistEntry = \Illuminate\Support\Facades\DB::table(config('database.email_schema') . '.em_black_list')
+                ->where('black_list_mail', $dados_usuario->usua_email)
+                ->whereNull('deleted_at')
+                ->first();
 
+            $isBlacklisted = ($blacklistEntry !== null);
             $usuario_retorno['email_blacklist'] = ($isBlacklisted ? 1 : 0);
 
             // Lógica para can_remove_from_blacklist
             $usuario_retorno['can_remove_from_blacklist'] = 0;
             if ($isBlacklisted) {
                 $tempoMinimo = config('blacklist.min_removal_minutes', 5);
+                // Como é stdClass do Query Builder, acessamos como propriedade
                 $criadoEm = Carbon::parse($blacklistEntry->created_at);
                 $agora = Carbon::now();
 

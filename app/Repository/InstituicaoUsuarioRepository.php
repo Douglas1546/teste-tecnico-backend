@@ -15,15 +15,11 @@ class InstituicaoUsuarioRepository
                     " . config('database.compartilhados_schema')  .  ".id_usuarios.usua_email,
                     GROUP_CONCAT(" . config('database.censo_schema')  .  ".instituicao_perfil.perf_descricao SEPARATOR ', ') AS usuario_perfil,
                     IF(MAX(" . config('database.email_schema')  .  ".em_black_list.black_list_id) IS NULL, 0, 1) AS email_blacklist,
-                    IF(
-                        MAX(" . config('database.email_schema')  .  ".em_black_list.black_list_id) IS NULL,
-                        0,
-                        IF(
-                            TIMESTAMPDIFF(MINUTE, MAX(" . config('database.email_schema')  .  ".em_black_list.created_at), NOW()) >= " . config('blacklist.min_removal_minutes', 5) . ",
-                            1,
-                            0
-                        )
-                    ) AS can_remove_from_blacklist
+                    CASE
+                        WHEN MAX(" . config('database.email_schema')  .  ".em_black_list.black_list_id) IS NULL THEN 0
+                        WHEN TIMESTAMPDIFF(MINUTE, MAX(" . config('database.email_schema')  .  ".em_black_list.created_at), CONVERT_TZ(NOW(), '+00:00', '-03:00')) >= " . config('blacklist.min_removal_minutes', 5) . " THEN 1
+                        ELSE 0
+                    END AS can_remove_from_blacklist
                 FROM " . config('database.censo_schema')  .  ".instituicao_usuarios
                 INNER JOIN " . config('database.compartilhados_schema')  .  ".id_usuarios ON " . config('database.censo_schema')  .  ".instituicao_usuarios.usua_id = " . config('database.compartilhados_schema')  .  ".id_usuarios.usua_id
                 INNER JOIN " . config('database.censo_schema')  .  ".usuario_perfil ON " . config('database.censo_schema')  .  ".instituicao_usuarios.inst_usua_id = " . config('database.censo_schema')  .  ".usuario_perfil.inst_usua_id

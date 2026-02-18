@@ -274,6 +274,10 @@ if ($minutosPassados >= config('blacklist.min_removal_minutes', 5)) {
 # Subir os containers
 docker-compose up --build -d
 
+# 3) Instale dependências dentro do container
+docker exec -u root censo-backend composer install --no-interaction --prefer-dist --optimize-autoloader
+
+
 # Executar as migrations
 # Na primeira execução, é necessário criar a tabela de controle de migrations:
 docker exec censo-backend php artisan migrate:install

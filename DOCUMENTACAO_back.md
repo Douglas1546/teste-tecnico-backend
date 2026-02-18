@@ -315,3 +315,18 @@ UPDATE em_black_list SET created_at = '2026-02-17 14:30:00' WHERE created_at IS 
 ```
 
 
+
+# Testes
+### observação importante
+- Caso você rode os testes, reinicie o banco de dados para poder usar o sistema normalmente.
+
+
+```bash
+# Executar todos os testes
+docker exec censo-backend vendor/bin/phpunit
+
+# Executar teste específico
+docker exec censo-backend vendor/bin/phpunit BlacklistRepositoryTest.php
+```
+
+
